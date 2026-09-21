@@ -506,6 +506,7 @@ dialog.sheet { position: fixed; inset: auto 0 0 0; margin: 0 auto; width: 100%; 
             <label for="f-full-date">Date paid</label>
           </div>
         </div>
+        <p class="support" id="fullHint" hidden></p>
       </div>
 
       <button type="button" class="btn tonal state" id="rcFromEditor" hidden style="align-self:flex-start"></button>
@@ -1110,6 +1111,28 @@ dialog.sheet { position: fixed; inset: auto 0 0 0; margin: 0 auto; width: 100%; 
     $('label[for="f-down-amt"]').textContent = 'Amount paid (' + c + ')';
     $('label[for="f-full-amt"]').textContent = 'Amount paid (' + c + ')';
   }
+  // The full payment is usually whatever is left after the downpayment, so fill it in (until the user types their own).
+  var fullTouched = false, fullAuto = false;
+  function balanceNow() {
+    var total = parseFloat(f.price.value);
+    if (!(total > 0)) return null;
+    return Math.round((total - (parseFloat(f.downAmt.value) || 0)) * 100) / 100;
+  }
+  function suggestFull() {
+    var hint = $('#fullHint'), bal = balanceNow(), cur = form.elements.ecur.value || DEFAULT_SETTINGS.currency;
+    if (bal == null) hint.hidden = true;
+    else {
+      hint.hidden = false;
+      hint.textContent = bal > 0 ? 'Balance after the downpayment: ' + money(bal, cur) : 'The downpayment already covers the total price.';
+    }
+    if (fullTouched || form.elements.payment.value !== 'paid') return;
+    if (bal != null && bal > 0) {
+      f.fullAmt.value = String(bal); fullAuto = true;
+      if (!f.fullDate.value) f.fullDate.value = todayYMD();
+    } else if (fullAuto) {
+      f.fullAmt.value = ''; fullAuto = false;
+    }
+  }
   function syncPayBoxes() {
     var v = form.elements.payment.value;
     $('#box-down').hidden = v === 'unpaid';
@@ -1161,6 +1184,8 @@ dialog.sheet { position: fixed; inset: auto 0 0 0; margin: 0 auto; width: 100%; 
     f.fullDate.value = item ? item.fullDate || '' : '';
     draftColors = item && item.colors ? item.colors.slice() : [];
     renderChips(); syncClear(); setTitleError(false); syncPayBoxes();
+    fullTouched = !!(item && item.fullAmount > 0); fullAuto = false;
+    suggestFull();
     $('#delBtn').hidden = !item;
     editor.showModal();
     $('#editorBody').scrollTop = 0;
@@ -1188,9 +1213,12 @@ dialog.sheet { position: fixed; inset: auto 0 0 0; margin: 0 auto; width: 100%; 
   f.picker.addEventListener('change', function () { addColor(f.picker.value); });
 
   form.addEventListener('change', function (e) {
-    if (e.target.name === 'payment') syncPayBoxes();
-    if (e.target.name === 'ecur') updateAmountLabels();
+    if (e.target.name === 'payment') { syncPayBoxes(); suggestFull(); }
+    if (e.target.name === 'ecur') { updateAmountLabels(); suggestFull(); }
   });
+  f.price.addEventListener('input', suggestFull);
+  f.downAmt.addEventListener('input', suggestFull);
+  f.fullAmt.addEventListener('input', function () { fullTouched = true; fullAuto = false; });
   [['downAmt', 'downDate'], ['fullAmt', 'fullDate']].forEach(function (pair) {
     f[pair[0]].addEventListener('change', function () {
       if (f[pair[0]].value && !f[pair[1]].value) f[pair[1]].value = todayYMD();
