@@ -2,7 +2,7 @@
 
 A free, private app for artists to keep art commissions on track: deadlines, payments, colors, themes, and image receipts. It runs in your browser, installs on your phone like an app, and works offline. No account needed.
 
-**[Open the app](https://YOURUSERNAME.github.io/REPONAME/)**
+**[Open the app](https://oswaldo-26.github.io/Commission-Buddy/)**
 
 ---
 
