@@ -446,12 +446,26 @@ dialog.sheet { position: fixed; inset: auto 0 0 0; margin: 0 auto; width: 100%; 
         <button type="button" class="btn text state" id="clearDate" hidden>Clear</button>
       </div>
 
+      <fieldset>
+        <legend>Currency</legend>
+        <div class="seg">
+          <input type="radio" name="ecur" id="e-php" value="₱" checked>
+          <label for="e-php"></label>
+          <input type="radio" name="ecur" id="e-usd" value="$">
+          <label for="e-usd"></label>
+          <input type="radio" name="ecur" id="e-jpy" value="¥">
+          <label for="e-jpy"></label>
+          <input type="radio" name="ecur" id="e-krw" value="₩">
+          <label for="e-krw"></label>
+        </div>
+      </fieldset>
+
       <div>
         <div class="field">
           <input id="f-price" type="number" inputmode="decimal" min="0" step="0.01" placeholder=" ">
-          <label for="f-price">Total price (optional)</label>
+          <label for="f-price">Total price</label>
         </div>
-        <p class="support">Used on receipts to show the balance.</p>
+        <p class="support">Optional. Used on receipts to show the balance.</p>
       </div>
 
       <fieldset>
@@ -576,17 +590,11 @@ dialog.sheet { position: fixed; inset: auto 0 0 0; margin: 0 auto; width: 100%; 
         <input id="s-studio" type="text" placeholder=" " autocomplete="off" maxlength="60">
         <label for="s-studio">Your name or studio</label>
       </div>
-      <div class="pay-grid">
-        <div class="field">
-          <input id="s-currency" type="text" placeholder=" " autocomplete="off" maxlength="4">
-          <label for="s-currency">Currency symbol</label>
-        </div>
-      </div>
       <div class="field">
         <input id="s-note" type="text" placeholder=" " autocomplete="off" maxlength="140">
         <label for="s-note">Message at the bottom</label>
       </div>
-      <p class="support" style="margin-top:-8px">Your name, currency, and message are remembered for every receipt. If Save image doesn't work, press and hold the receipt to save it.</p>
+      <p class="support" style="margin-top:-8px">Your name and message are remembered for every receipt. If Save image doesn't work, press and hold the receipt to save it.</p>
     </div>
   </div>
 </dialog>
@@ -695,28 +703,14 @@ dialog.sheet { position: fixed; inset: auto 0 0 0; margin: 0 auto; width: 100%; 
   });
 
   /* ---------- state ---------- */
-  var REGION_CURRENCY = {
-    US: '$', CA: '$', AU: '$', NZ: '$', SG: '$', HK: '$', MX: '$', PH: '₱', GB: '£', IE: '€',
-    DE: '€', FR: '€', ES: '€', IT: '€', NL: '€', PT: '€', BE: '€', AT: '€', FI: '€', GR: '€',
-    JP: '¥', CN: '¥', KR: '₩', IN: '₹', ID: 'Rp', MY: 'RM', TH: '฿', VN: '₫', BR: 'R$',
-    SE: 'kr', NO: 'kr', DK: 'kr', CH: 'CHF', PL: 'zł', TR: '₺', ZA: 'R', NG: '₦', AE: 'AED', SA: 'SAR'
-  };
-  function guessCurrency() {
-    try {
-      var langs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language];
-      for (var i = 0; i < langs.length; i++) {
-        var m = /[-_]([A-Za-z]{2})\b/.exec(langs[i] || '');
-        var region = m ? m[1].toUpperCase() : (typeof Intl !== 'undefined' && Intl.Locale ? new Intl.Locale(langs[i]).maximize().region : '');
-        if (REGION_CURRENCY[region]) return REGION_CURRENCY[region];
-      }
-    } catch (e) {}
-    return '$';
-  }
-  var DEFAULT_SETTINGS = { studio: '', currency: guessCurrency(), note: 'Thank you for your support!' };
-  // Earlier versions defaulted to "$"; keep "$" only if the user typed it themselves.
+  var CURRENCIES = [['₱', 'Peso'], ['$', 'Dollar'], ['¥', 'Yen'], ['₩', 'Won']];
+  var DEFAULT_SETTINGS = { studio: '', currency: '₱', note: 'Thank you for your support!' };
+  function isCurrency(c) { return CURRENCIES.some(function (x) { return x[0] === c; }); }
+  // Earlier versions guessed "$" from the device language; keep "$" only if the user picked it themselves.
+  function currencyOf(it) { return it && isCurrency(it.currency) ? it.currency : state.settings.currency; }
   function normSettings(raw) {
     var st = Object.assign({}, DEFAULT_SETTINGS, raw || {});
-    if (st.currency === '$' && !st.currencyEdited) st.currency = DEFAULT_SETTINGS.currency;
+    if (!isCurrency(st.currency) || (st.currency === '$' && !st.currencyEdited)) st.currency = DEFAULT_SETTINGS.currency;
     return st;
   }
   var state = { items: [], tab: 'active', ready: false, settings: Object.assign({}, DEFAULT_SETTINGS) };
@@ -789,6 +783,7 @@ dialog.sheet { position: fixed; inset: auto 0 0 0; margin: 0 auto; width: 100%; 
           else items.push(Object.assign({ id: d.id }, d.data()));
         });
         state.items = items;
+        items.filter(function (i) { return !isCurrency(i.currency); }).forEach(function (i) { saveItem(Object.assign({}, i, { currency: state.settings.currency })); });
         state.ready = true;
         render();
       }, function () {
@@ -801,6 +796,9 @@ dialog.sheet { position: fixed; inset: auto 0 0 0; margin: 0 auto; width: 100%; 
       try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
       try { state.items = JSON.parse(lsGet(LS_ITEMS) || '[]') || []; } catch (e) { state.items = []; }
       try { state.settings = normSettings(JSON.parse(lsGet(LS_SETTINGS) || '{}')); } catch (e) {}
+      // Commissions saved before currencies were per-commission keep the currency they were using.
+      var legacy = state.items.filter(function (i) { return !isCurrency(i.currency); });
+      if (legacy.length) { legacy.forEach(function (i) { i.currency = state.settings.currency; }); persistLocal(); }
       state.ready = true;
       render();
     }
@@ -1027,7 +1025,7 @@ dialog.sheet { position: fixed; inset: auto 0 0 0; margin: 0 auto; width: 100%; 
     return d ? d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : '';
   }
   function renderView(it) {
-    var cur = state.settings.currency || DEFAULT_SETTINGS.currency;
+    var cur = currencyOf(it);
     var pay = PAY_ORDER.indexOf(it.payment) >= 0 ? it.payment : 'unpaid';
     var payCls = (it.done && pay !== 'paid') ? 'owed' : pay;
     var due = it.done ? null : dueInfo(it);
@@ -1102,6 +1100,16 @@ dialog.sheet { position: fixed; inset: auto 0 0 0; margin: 0 auto; width: 100%; 
   };
   function numOrNull(v) { var n = parseFloat(v); return isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null; }
   function todayYMD() { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  var ECUR = { '₱': 'e-php', '$': 'e-usd', '¥': 'e-jpy', '₩': 'e-krw' };
+  [['e-php', '₱ Peso'], ['e-usd', '$ Dollar'], ['e-jpy', '¥ Yen'], ['e-krw', '₩ Won']].forEach(function (x) {
+    $('label[for="' + x[0] + '"]').innerHTML = icon('check', 18) + '<span>' + x[1] + '</span>';
+  });
+  function updateAmountLabels() {
+    var c = form.elements.ecur.value || DEFAULT_SETTINGS.currency;
+    $('label[for="f-price"]').textContent = 'Total price (' + c + ')';
+    $('label[for="f-down-amt"]').textContent = 'Amount paid (' + c + ')';
+    $('label[for="f-full-amt"]').textContent = 'Amount paid (' + c + ')';
+  }
   function syncPayBoxes() {
     var v = form.elements.payment.value;
     $('#box-down').hidden = v === 'unpaid';
@@ -1144,6 +1152,8 @@ dialog.sheet { position: fixed; inset: auto 0 0 0; margin: 0 auto; width: 100%; 
     f.done.checked = !!(item && item.done);
     f.color.value = '';
     form.elements.payment.value = item && item.payment ? item.payment : 'unpaid';
+    $('#' + ECUR[item ? currencyOf(item) : state.settings.currency]).checked = true;
+    updateAmountLabels();
     f.price.value = item ? numStr(item.price) : '';
     f.downAmt.value = item ? numStr(item.downAmount) : '';
     f.downDate.value = item ? item.downDate || '' : '';
@@ -1179,6 +1189,7 @@ dialog.sheet { position: fixed; inset: auto 0 0 0; margin: 0 auto; width: 100%; 
 
   form.addEventListener('change', function (e) {
     if (e.target.name === 'payment') syncPayBoxes();
+    if (e.target.name === 'ecur') updateAmountLabels();
   });
   [['downAmt', 'downDate'], ['fullAmt', 'fullDate']].forEach(function (pair) {
     f[pair[0]].addEventListener('change', function () {
@@ -1196,6 +1207,7 @@ dialog.sheet { position: fixed; inset: auto 0 0 0; margin: 0 auto; width: 100%; 
       title: title,
       client: f.client.value.trim(),
       deadline: f.deadline.value || '',
+      currency: form.elements.ecur.value || DEFAULT_SETTINGS.currency,
       price: numOrNull(f.price.value),
       payment: form.elements.payment.value || 'unpaid',
       downAmount: numOrNull(f.downAmt.value),
@@ -1211,6 +1223,8 @@ dialog.sheet { position: fixed; inset: auto 0 0 0; margin: 0 auto; width: 100%; 
     var wasNew = !editing;
     editor.close();
     saveItem(item);
+    // remember the last currency used, so new commissions start with it
+    if (item.currency !== state.settings.currency) saveSettings(Object.assign({}, state.settings, { currency: item.currency, currencyEdited: true }));
     if (!silent) toast(wasNew ? 'Commission added' : 'Changes saved');
     return item;
   }
@@ -1239,15 +1253,16 @@ dialog.sheet { position: fixed; inset: auto 0 0 0; margin: 0 auto; width: 100%; 
   var FONT = '"Roboto Flex", "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif';
   var rc = { id: null, item: null, token: 0, blob: null, filename: '' };
   var receiptEl = $('#receipt');
-  var rs = { studio: $('#s-studio'), currency: $('#s-currency'), note: $('#s-note') };
+  var rs = { studio: $('#s-studio'), note: $('#s-note') };
   var rcTimer, rcSaveTimer;
 
   function readSettings() {
-    return { studio: rs.studio.value.trim(), currency: rs.currency.value.trim() || DEFAULT_SETTINGS.currency, note: rs.note.value.trim(), currencyEdited: rs.currency.dataset.edited === '1' };
+    return { studio: rs.studio.value.trim(), currency: state.settings.currency, note: rs.note.value.trim(), currencyEdited: !!state.settings.currencyEdited };
   }
   function money(n, cur) {
-    var t = Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    return /^[A-Za-z]+$/.test(cur) ? cur + ' ' + t : cur + t;
+    var dec = (cur === '¥' || cur === '₩') ? 0 : 2;   // yen and won are normally written without decimals
+    var t = Number(n).toLocaleString(undefined, { minimumFractionDigits: dec, maximumFractionDigits: dec });
+    return cur + t;
   }
   function longDate(ymd) {
     var d = parseYMD(ymd);
@@ -1266,7 +1281,7 @@ dialog.sheet { position: fixed; inset: auto 0 0 0; margin: 0 auto; width: 100%; 
     return {
       type: type, amount: amount, date: date, total: total, paid: paid, balance: balance,
       full: !isDown || (balance != null && balance <= 0),
-      studio: st.studio, currency: st.currency, note: st.note,
+      studio: st.studio, currency: currencyOf(item), note: st.note,
       client: item.client || '', title: item.title || '', theme: item.theme || '',
       no: String(item.id).slice(-5).toUpperCase() + (isDown ? '-DP' : '-FP'),
       colors: window.__md.light(currentSeed)
@@ -1460,8 +1475,6 @@ dialog.sheet { position: fixed; inset: auto 0 0 0; margin: 0 auto; width: 100%; 
     rc.id = item.id; rc.item = item;
     var st = state.settings;
     rs.studio.value = st.studio || '';
-    rs.currency.value = st.currency || DEFAULT_SETTINGS.currency;
-    rs.currency.dataset.edited = st.currencyEdited ? '1' : '';
     rs.note.value = st.note == null ? '' : st.note;
     type = type || (item.fullAmount > 0 ? 'full' : 'down');
     receiptEl.querySelector('input[name="rtype"][value="' + type + '"]').checked = true;
@@ -1474,9 +1487,8 @@ dialog.sheet { position: fixed; inset: auto 0 0 0; margin: 0 auto; width: 100%; 
 
   $('#rcClose').addEventListener('click', function () { receiptEl.close(); });
   receiptEl.addEventListener('change', function (e) { if (e.target.name === 'rtype') renderReceipt(); });
-  [rs.studio, rs.currency, rs.note].forEach(function (el) {
+  [rs.studio, rs.note].forEach(function (el) {
     el.addEventListener('input', function () {
-      if (el === rs.currency) rs.currency.dataset.edited = '1';
       clearTimeout(rcTimer); rcTimer = setTimeout(renderReceipt, 250);
       clearTimeout(rcSaveTimer); rcSaveTimer = setTimeout(function () { saveSettings(readSettings()); }, 700);
     });
@@ -1600,6 +1612,7 @@ dialog.sheet { position: fixed; inset: auto 0 0 0; margin: 0 auto; width: 100%; 
       payment: PAY_ORDER.indexOf(raw.payment) >= 0 ? raw.payment : 'unpaid',
       downAmount: num(raw.downAmount), downDate: ymd(raw.downDate),
       fullAmount: num(raw.fullAmount), fullDate: ymd(raw.fullDate),
+      currency: isCurrency(raw.currency) ? raw.currency : '',
       theme: str(raw.theme, 120),
       colors: Array.isArray(raw.colors) ? raw.colors.filter(function (c) { return typeof c === 'string' && c.trim(); }).map(function (c) { return c.trim().slice(0, 40); }).slice(0, 12) : [],
       details: str(raw.details, 2000),
@@ -1651,7 +1664,7 @@ dialog.sheet { position: fixed; inset: auto 0 0 0; margin: 0 auto; width: 100%; 
     if (st && typeof st === 'object') {
       saveSettings({
         studio: typeof st.studio === 'string' ? st.studio.slice(0, 60) : '',
-        currency: (typeof st.currency === 'string' && st.currency.slice(0, 4)) || DEFAULT_SETTINGS.currency,
+        currency: isCurrency(st.currency) ? st.currency : DEFAULT_SETTINGS.currency,
         note: typeof st.note === 'string' ? st.note.slice(0, 140) : DEFAULT_SETTINGS.note,
         currencyEdited: !!st.currencyEdited
       });

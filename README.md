@@ -2,7 +2,7 @@
 
 A free, private app for artists to keep art commissions on track: deadlines, payments, colors, themes, and image receipts. It runs in your browser, installs on your phone like an app, and works offline. No account needed.
 
-**[Open the app](https://oswaldo-26.github.io/Commission-Buddy/)**
+**[Open the app](https://YOURUSERNAME.github.io/REPONAME/)**
 
 ---
 
@@ -37,7 +37,8 @@ You can also skip installing and just use the link like a normal website.
 Tap **New commission**, fill in what you know, and tap **Save**. Only the title is required.
 
 ### Keep track of payments
-- In the editor, choose **Unpaid**, **Downpayment**, or **Fully paid**.
+- In the editor, choose the commission's **Currency** (**Peso**, **Dollar**, **Yen**, or **Won**). Each commission has its own, so you can charge different clients in different currencies. New commissions start with the currency you used last.
+- Then choose **Unpaid**, **Downpayment**, or **Fully paid**.
 - Choosing Downpayment shows fields for the amount and date received. Choosing Fully paid shows those for the full payment too. Typing an amount fills in today's date, and you can change it.
 - Add a **Total price** if you want receipts to show the balance.
 - On a commission's card, tap the payment label to move it quickly from Unpaid to Downpayment paid to Fully paid.
@@ -45,7 +46,7 @@ Tap **New commission**, fill in what you know, and tap **Save**. Only the title 
 ### Make a receipt
 1. Tap **Receipt** on a commission's card. It appears once a payment amount has been recorded.
 2. Choose **Downpayment** or **Full payment** at the top.
-3. Enter your name or studio, your currency symbol, and a message for the bottom. These are remembered for next time.
+3. Enter your name or studio and a message for the bottom. These are remembered for next time. The receipt uses the currency you chose for that commission.
 4. Tap **Save image** to download the receipt as a PNG. On phones you can also tap **Share receipt** to send it directly to a chat or save it to your photos.
 
 A receipt shows who paid, what for, the amount, the date, and a receipt number. If you entered a total price, it also shows what has been paid so far and the balance.
@@ -110,8 +111,8 @@ Yes, but each device keeps its own data. Use Export backup and Import a backup t
 **Where do my receipts go?**
 On most devices, Save image puts the file in your Downloads folder. On iPhone, an installed app opens the share sheet instead, where you can choose Save Image or Save to Files. On any phone, Share receipt lets you send it straight to a client or save it to your photos.
 
-**Can I change the currency?**
-Yes. Enter your symbol in the Currency symbol field on the receipt screen. By default it's guessed from your device's language and region.
+**Which currencies are supported?**
+Peso (₱), Dollar ($), Yen (¥), and Won (₩). You choose one for each commission in the editor, right above where you type the prices and payments. Yen and won are shown without decimals. The app starts on Peso, and more currencies can be added later.
 
 **Does it work offline?**
 Yes, after you've opened it once with internet.
